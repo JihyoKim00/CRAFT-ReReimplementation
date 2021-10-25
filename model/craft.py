@@ -7,6 +7,11 @@ MIT License
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
+import os
+import sys
+sys.path.append(os.path.dirname((os.path.abspath(os.path.dirname(__file__)))))
+
 from util.torchutil import *
 from model.vgg16_bn import vgg16_bn
 
@@ -137,6 +142,6 @@ class CRAFT(nn.Module):
         return boxes, polys, ret_score_text
 
 if __name__ == '__main__':
-    model = CRAFT(pretrained=True).cuda()
+    model = CRAFT(use_vgg16_pretrained=True).cuda()
     output, _ = model(torch.randn(1, 3, 768, 768).cuda())
     print(output.shape)

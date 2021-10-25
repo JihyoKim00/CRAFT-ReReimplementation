@@ -5,6 +5,8 @@ from eval import rrc_evaluation_funcs
 import importlib
 import zipfile
 import os
+import numpy as np
+
 def evaluation_imports():
     """
     evaluation_imports: Dictionary ( key = module name , value = alias  )  with python modules used in the evaluation. 
@@ -350,12 +352,14 @@ def eval_2015(res_folder):
     filenames = os.listdir(res_folder)
     zip = zipfile.ZipFile(submitfile, "w", zipfile.ZIP_DEFLATED)
     for filename in filenames:
-        filepath = os.path.join(res_folder, filename)
-        zip.write(filepath, filename)
+        if os.path.splitext(filename)[-1] == '.txt':
+            filepath = os.path.join(res_folder, filename)
+            zip.write(filepath, filename)
     zip.close()
     gtfile = os.path.join(current_folder, 'gt.zip')
     params['g'] = gtfile
     params['s'] = submitfile
+
     rrc_evaluation_funcs.main_evaluation(params, default_evaluation_params, validate_data, evaluate_method)
 
 

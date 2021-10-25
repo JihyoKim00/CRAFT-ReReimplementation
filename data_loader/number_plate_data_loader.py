@@ -1,5 +1,5 @@
 from util.file_utils import *
-from data_loader.data_loader import craft_base_dataset
+from data_loader import craft_base_dataset
 import csv
 
 class NumberPlate(craft_base_dataset):
@@ -27,20 +27,18 @@ class NumberPlate(craft_base_dataset):
 
         def parse_char_bboxes(all_ponits_x, all_points_y):
 
+            if not os.path.exists(csv_path):
+                raise FileNotFoundError("No such GT file as " + csv_path)
 
+            gt = {}
 
-        if not os.path.exists(csv_path):
-            raise FileNotFoundError("No such GT file as " + csv_path)
-
-        gt = {}
-
-        with open(csv_path, mode="r") as gt_file:
-            csv_reader = csv.DictReader(gt_file)
-            for row in csv_reader:
-                img_name = row["filename"]
-                num_char_bboxes = row["region_count"]
-                char_bboxes = row[]
+            with open(csv_path, mode="r") as gt_file:
+                csv_reader = csv.DictReader(gt_file)
+                for row in csv_reader:
+                    img_name = row["filename"]
+                    num_char_bboxes = row["region_count"]
+                    #char_bboxes = row[]
 
 
 
-    def read_img(self):
+    # def read_img(self):

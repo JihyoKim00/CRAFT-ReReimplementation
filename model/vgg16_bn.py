@@ -57,16 +57,25 @@ class vgg16_bn(torch.nn.Module):
                 param.requires_grad = False
 
     def forward(self, X):
+        #print('input : ', X.shape)
         h = self.slice1(X)
+        #print(h.shape)
         h_relu2_2 = h
         h = self.slice2(h)
+        #print(h.shape)
         h_relu3_2 = h
         h = self.slice3(h)
+        #print(h.shape)
         h_relu4_3 = h
         h = self.slice4(h)
+        #print(h.shape)
         h_relu5_3 = h
         h = self.slice5(h)
+        #print(h.shape)
         h_fc7 = h
+
+
+
         vgg_outputs = namedtuple("VggOutputs", ['fc7', 'relu5_3', 'relu4_3', 'relu3_2', 'relu2_2'])
         out = vgg_outputs(h_fc7, h_relu5_3, h_relu4_3, h_relu3_2, h_relu2_2)
         return out

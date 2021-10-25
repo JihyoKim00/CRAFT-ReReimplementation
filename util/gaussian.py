@@ -2,17 +2,19 @@ from math import exp
 import numpy as np
 import cv2
 import os
-from util import imgproc
+from .imgproc import *
 
 
 class GaussianTransformer(object):
 
     def __init__(self, imgSize=512, region_threshold=0.4,
                  affinity_threshold=0.2):
+
         distanceRatio = 3.34
         scaledGaussian = lambda x: exp(-(1 / 2) * (x ** 2))
         self.region_threshold = region_threshold
         self.imgSize = imgSize
+
         self.standardGaussianHeat = self._gen_gaussian_heatmap(imgSize, distanceRatio)
 
         _, binary = cv2.threshold(self.standardGaussianHeat, region_threshold * 255, 255, 0)
@@ -180,6 +182,7 @@ class GaussianTransformer(object):
 
 
 if __name__ == '__main__':
+
     gaussian = GaussianTransformer(512, 0.4, 0.2)
     gaussian.saveGaussianHeat()
     gaussian._test()
@@ -194,10 +197,10 @@ if __name__ == '__main__':
     # image = gaussian.add_region_character(image, bbox)
     # print(image.max())
     image = gaussian.generate_region((500, 500, 1), [bbox4])
-    target_gaussian_heatmap_color = imgproc.cvt2HeatmapImg(image.copy() / 255)
-    cv2.imshow("test", target_gaussian_heatmap_color)
-    cv2.imwrite("test.jpg", target_gaussian_heatmap_color)
-    cv2.waitKey()
+    target_gaussian_heatmap_color = cvt2HeatmapImg(image.copy() / 255)
+    #cv2.imshow("test", target_gaussian_heatmap_color)
+    cv2.imwrite("/data/workspace/woans0104/CRAFT-reimplementation/test.jpg", target_gaussian_heatmap_color)
+    #cv2.waitKey()
     # weight, target = gaussian.generate_target((1024, 1024, 3), bbox.copy())
     # target_gaussian_heatmap_color = imgproc.cvt2HeatmapImg(weight.copy() / 255)
     # cv2.imshow('test', target_gaussian_heatmap_color)

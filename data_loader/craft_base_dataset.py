@@ -1,20 +1,19 @@
 import torch
 import torch.utils.data as data
-import scipy.io as scio
+import random
+import torchvision.transforms as transforms
+import Polygon as plg
+
+
+import os
+import sys
+sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
+from util.file_utils import *
+import util.imgproc as imgproc
 from util.gaussian import GaussianTransformer
 from util.watershed import watershed
-import re
-import itertools
-from util.file_utils import *
-from util.mep import mep
-import random
-from PIL import Image
-import torchvision.transforms as transforms
 from util import craft_utils
-import Polygon as plg
-import numpy as np
-import cv2
-import util.imgproc as imgproc
+
 
 
 def ratio_area(h, w, box):
@@ -183,10 +182,10 @@ class craft_base_dataset(data.Dataset):
         self.gaussianTransformer = GaussianTransformer(imgSize=1024, region_threshold=0.35, affinity_threshold=0.15)
         self.perform_input_data_corruption=perform_input_data_corruption
         self.out_path = out_path
-
         self.text_threshold=0.7
         self.link_threshold=0.4
         self.low_text=0.45
+
 
     def __getitem__(self, index):
         return self.pull_item(index)
@@ -357,6 +356,7 @@ class craft_base_dataset(data.Dataset):
     def pull_item(self, index):
         image, character_bboxes, words, confidence_mask, confidences, image_path = self.load_image_gt_and_confidencemask(index)
 
+
         if len(confidences) == 0:
             confidences = 1.0
         else:
@@ -374,6 +374,7 @@ class craft_base_dataset(data.Dataset):
             self.saveImage(self.get_imagename(index), image.copy(), character_bboxes, affinity_bboxes, region_scores,
                            affinity_scores, confidence_mask, self.out_path)
 
+
         # perform random corruption (random scailing, crop, horizontal flip, rotation) in order to increase robustness
         if self.perform_input_data_corruption:
             image = random_scale(image, character_bboxes, self.target_size)
@@ -386,6 +387,7 @@ class craft_base_dataset(data.Dataset):
         # resize and pad images
         else:
             image, character_bboxes = padding_image(image, self.target_size, character_bboxes)
+            #print(image.shape)
             region_scores, _ = padding_image(region_scores, self.target_size)
             affinity_scores, _ = padding_image(affinity_scores, self.target_size)
             confidence_mask, _ = padding_image(confidence_mask, self.target_size)
@@ -408,10 +410,11 @@ class craft_base_dataset(data.Dataset):
         # change the dimensions.
         image = Image.fromarray(image)
         image = image.convert('RGB') # convert to RGB (why is this necessary? Isn't it already RGB?)
+
         image = transforms.ColorJitter(brightness=32.0 / 255, saturation=0.5)(image)
         np_array_image = np.array(image)
 
-        # convert preprocessed image to tensor
+        # convert preprocessed image to tensor  ------ check!!!!!!!
         image_tensor = imgproc.normalizeMeanVariance(np_array_image, mean=(0.485, 0.456, 0.406),
                                               variance=(0.229, 0.224, 0.225))
         image_tensor = torch.from_numpy(image_tensor).float().permute(2, 0, 1)
@@ -419,6 +422,7 @@ class craft_base_dataset(data.Dataset):
         region_scores_torch = torch.from_numpy(region_scores).float()
         affinity_scores_torch = torch.from_numpy(affinity_scores).float()
         confidence_mask_torch = torch.from_numpy(confidence_mask).float()
+
         return image_tensor, region_scores_torch, affinity_scores_torch, confidence_mask_torch, confidences, np_array_image, image_path
 
 if __name__ == '__main__':

@@ -7,7 +7,10 @@ MIT License
 import numpy as np
 import cv2
 import math
+import matplotlib.pyplot as plt
 from util import file_utils, imgproc
+from util import writer
+
 import os
 import torch
 
@@ -346,6 +349,9 @@ def save_outputs(image, region_scores, affinity_scores, text_threshold, link_thr
     cv2.imwrite(outoput_path, output)
     return output
 
+
+
+
 def save_outputs_from_tensors(images, region_scores, affinity_scores, text_threshold, link_threshold,
                                            low_text, output_dir, image_names, confidence_mask = None):
 
@@ -390,3 +396,122 @@ def save_outputs_from_tensors(images, region_scores, affinity_scores, text_thres
         output_images.append(output_image)
 
     return output_images
+
+
+
+def make_logger(mode, path=False):
+
+    # mode = iter or epoch
+
+    def logger_path(mode,path):
+
+        if not os.path.exists(f'{path}/{mode}'):
+            os.mkdir(f'{path}/{mode}')
+
+        trn_logger_path = os.path.join(f'{path}/{mode}', f'train_{mode}.log')
+        val_logger_path = os.path.join(f'{path}/{mode}', f'validation_{mode}.log')
+        # val_logger_high_path = os.path.join(f'./saved_models/{opt.experiment_name}/{mode}',
+        #                                        f'validation_high_{mode}.log')
+
+
+        return trn_logger_path, val_logger_path
+
+
+    trn_logger_path, val_logger_path = logger_path(mode, path)
+
+    trn_logger = writer.Logger(trn_logger_path)
+    val_logger = writer.Logger(val_logger_path)
+    #val_logger_high = Logger(val_logger_high_path)
+
+    return trn_logger, val_logger
+
+
+def split_logger(lang_dict):
+    eopch_li = []
+    loss_li = []
+    #acc_li = []
+    #ned_li = []
+
+    for i in lang_dict:
+        new_dict = i.split()
+        eopch_li.append(int(new_dict[0]))
+        loss_li.append(float(new_dict[1]))
+        #acc_li.append(float(new_dict[2]))
+        #ned_li.append(float(new_dict[3]))
+
+    return eopch_li, loss_li
+
+def read_txt(path):
+    with open(path, 'r', encoding="utf8", errors='ignore') as d:
+        lang_dict = [l for l in d.read().splitlines() if len(l) > 0]
+
+    eopch_li, loss_li = split_logger(lang_dict)
+
+    return eopch_li, loss_li
+
+
+# def draw_curve(work_dir, logger1, logger2, val_color, filelname='seg'):
+#     logger1 = read_txt(logger1)
+#     logger2 = read_txt(logger2)
+#
+#     epoch, trn_loss1, acc1, ned1 = logger1
+#     epoch, trn_loss2, acc2, ned2 = logger2
+#
+#     plt.figure(1)
+#     plt.plot(epoch, trn_loss1, '-b', label='train_loss')
+#     plt.plot(epoch, trn_loss2, val_color, label='val_{}_loss'.format(filelname))
+#
+#     plt.xlabel('Epoch')
+#     plt.legend()
+#     plt.title('compare_loss')
+#     plt.savefig(os.path.join(work_dir, 'loss_{}.png'.format(filelname)))
+#     plt.close()
+#
+#     plt.figure(2)
+#     plt.plot(epoch, acc1, '-b', label='train_acc')
+#     plt.plot(epoch, acc2, val_color, label='val_{}_acc'.format(filelname))
+#
+#     plt.xlabel('Epoch')
+#     plt.legend()
+#     plt.title('compare_acc')
+#     plt.savefig(os.path.join(work_dir, 'val_acc_{}.png'
+#                              .format(filelname)))
+#
+#     plt.close()
+#
+#     plt.figure(3)
+#     plt.plot(epoch, ned1, '-b', label='train_dist')
+#     plt.plot(epoch, ned2, val_color, label='val_{}_dist'.format(filelname))
+#
+#     plt.xlabel('Epoch')
+#     plt.legend()
+#     plt.title('compare_editDist')
+#     plt.savefig(os.path.join(work_dir, 'val_1-NED_{}.png'
+#                              .format(filelname)))
+#
+#     plt.close()
+#
+
+
+def draw_curve(work_dir, logger1, logger2, val_color, xlabel='', filelname='seg'):
+
+    logger1 = logger1.read()
+    logger2 = logger2.read()
+
+    #logger1 = read_txt(logger1)
+    #logger2 = read_txt(logger2)
+
+    epoch, trn_loss1 = zip(*logger1)
+    epoch, trn_loss2 = zip(*logger2)
+
+    plt.figure(1)
+    plt.plot(epoch, trn_loss1, '-b', label='train_loss')
+    plt.plot(epoch, trn_loss2, val_color, label='val_{}_loss'.format(filelname))
+
+    plt.xlabel('{}'.format(xlabel))
+    plt.legend()
+    plt.title('compare_loss')
+    plt.savefig(os.path.join(work_dir, 'loss_{}.png'.format(filelname)))
+    plt.close()
+
+

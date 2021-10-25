@@ -20,6 +20,13 @@ import logging
 from model.craft import CRAFT
 
 from collections import OrderedDict
+
+from tqdm import tqdm
+from util import writer as craft_writer
+from util.mseloss import Maploss
+
+
+
 def copyStateDict(state_dict):
     if list(state_dict.keys())[0].startswith("module"):
         start_idx = 1
@@ -38,7 +45,9 @@ def test_net(args, net, image, text_threshold, link_threshold, low_text, cuda, p
     t0 = time.time()
 
     # resize
-    img_resized, target_ratio, size_heatmap = imgproc.resize_aspect_ratio(image, args.canvas_size, interpolation=cv2.INTER_LINEAR, mag_ratio=args.mag_ratio)
+    img_resized, target_ratio, size_heatmap = imgproc.resize_aspect_ratio(image, 2240,
+                                                                          interpolation=cv2.INTER_LINEAR,
+                                                                          mag_ratio=1.5)
     ratio_h = ratio_w = 1 / target_ratio
 
     # preprocessing
@@ -49,7 +58,12 @@ def test_net(args, net, image, text_threshold, link_threshold, low_text, cuda, p
         x = x.cuda()
 
     # forward pass
+
     y, _ = net(x)
+
+    #out1 = y[:, :, :, 0].copy().cuda()
+    #out2 = y[:, :, :, 1].copy().cuda()
+
 
     # make score and link map
     score_text = y[0,:,:,0].cpu().data.numpy()
@@ -74,17 +88,21 @@ def test_net(args, net, image, text_threshold, link_threshold, low_text, cuda, p
     render_img = np.hstack((render_img, score_link))
     ret_score_text = imgproc.cvt2HeatmapImg(render_img)
 
-    if args.show_time : logging.info("\ninfer/postproc time : {:.3f}/{:.3f}".format(t0, t1))
+    #if args.show_time :
+
+    logging.info("\ninfer/postproc time : {:.3f}/{:.3f}".format(t0, t1))
 
     return boxes, polys, ret_score_text
 
 def test(args, ckpt_path):
     # load net
-    net = CRAFT(pretrained=False)     # initialize
 
+    net = CRAFT(use_vgg16_pretrained=False)
     logging.info('Loading weights from checkpoint {}'.format(ckpt_path))
 
-    net.load_state_dict(copyStateDict(torch.load(ckpt_path)))
+    net_param = torch.load(ckpt_path)
+    net.load_state_dict(copyStateDict(net_param['craft']))
+
     net = net.cuda()
     net = torch.nn.DataParallel(net)
     cudnn.benchmark = False
@@ -98,7 +116,8 @@ def test(args, ckpt_path):
         logging.info("Test image {:d}/{:d}: {:s}".format(k+1, len(image_list), image_path), end='\r')
         image = imgproc.loadImage(image_path)
 
-        bboxes, polys, score_text = test_net(net, image, args.text_threshold, args.link_threshold, args.low_text, True, args.poly)
+        bboxes, polys, score_text = test_net(net, image, args.text_threshold, args.link_threshold,
+                                             args.low_text, True, args.poly)
 
         # save score text
         filename, file_ext = os.path.splitext(os.path.basename(image_path))
@@ -108,6 +127,50 @@ def test(args, ckpt_path):
         file_utils.saveResult(image_path, image[:, :, ::-1], polys, dirname=result_folder)
 
     logging.info("elapsed time : {}s".format(time.time() - t))
+
+
+
+
+
+#TO-do
+def validation(net, loader, logger, epoch):
+
+    losses = craft_writer.AverageMeter()
+    net.eval()
+    t = time.time()
+    print('#----------------------------------------------------#')
+    print('start validation')
+    #import ipdb;ipdb.set_trace()
+    with torch.no_grad():
+        for images, gh_label, gah_label, mask, _, unnormalized_images, img_paths in loader:
+
+            images = images.cuda()
+            gh_label = gh_label.cuda()
+            gah_label = gah_label.cuda()
+            mask = mask.cuda()
+
+            out, _ = net(images)
+
+
+            out1 = out[:, :, :, 0].cuda()
+            out2 = out[:, :, :, 1].cuda()
+
+            criterion = Maploss()
+            loss = criterion(gh_label, gah_label, out1, out2, mask)
+
+            # log update
+            losses.update(loss.item(), 1)
+
+
+    logger.write([epoch, losses.avg])
+    print(f'Validation Loss: {losses.avg:0.5f} ')
+
+    return losses.avg
+
+
+
+
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='CRAFT Text Detection')

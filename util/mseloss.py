@@ -63,6 +63,7 @@ class Maploss(nn.Module):
     def forward(self, gh_label, gah_label, p_gh, p_gah, mask):
 
         assert p_gh.size() == gh_label.size() and p_gah.size() == gah_label.size()
+        #import ipdb;ipdb.set_trace()
         loss1 = self.loss_fn(p_gh, gh_label)
         loss2 = self.loss_fn(p_gah, gah_label)
         loss_g = torch.mul(loss1, mask)
