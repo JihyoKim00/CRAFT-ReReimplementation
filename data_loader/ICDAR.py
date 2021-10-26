@@ -100,12 +100,17 @@ class ICDAR2013(craft_base_dataset):
 
 
 class ICDAR2015(craft_base_dataset):
-    def __init__(self, net, icdar2015_folder, target_size=768, viz=False, debug=False):
+    def __init__(self, net, icdar2015_folder, target_size=768, viz=False, debug=False, mode='train'):
         super(ICDAR2015, self).__init__(target_size, viz, debug)
         self.net = net
-        #self.net.eval()
-        self.img_folder = os.path.join(icdar2015_folder, 'ch4_training_images')
-        self.gt_folder = os.path.join(icdar2015_folder, 'ch4_training_localization_transcription_gt')
+
+        if mode =='train':
+            self.img_folder = os.path.join(icdar2015_folder, 'ch4_training_images')
+            self.gt_folder = os.path.join(icdar2015_folder, 'ch4_training_localization_transcription_gt')
+        elif mode =='test':
+            self.img_folder = os.path.join(icdar2015_folder, 'ch4_test_images')
+            self.gt_folder = os.path.join(icdar2015_folder, 'ch4_test_localization_transcription_gt')
+
         imagenames = os.listdir(self.img_folder)
         self.images_path = []
         for imagename in imagenames:
@@ -148,8 +153,8 @@ class ICDAR2015(craft_base_dataset):
                     continue
                 pursedo_bboxes, bbox_region_scores, confidence = self.inference_pursedo_bboxes(self.net, image,
                                                                                                word_bboxes[i],
-                                                                                               words[i],
-                                                                                               viz=self.viz)
+                                                                                               words[i])
+
                 confidences.append(confidence)
                 cv2.fillPoly(confidence_mask, [np.int32(word_bboxes[i])], (confidence))
                 new_words.append(words[i])

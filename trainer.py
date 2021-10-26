@@ -95,22 +95,22 @@ if __name__ == '__main__':
     if not os.path.exists(images_path):
         os.mkdir(images_path)
 
-    ########## config logging ##########
-    numeric_log_level = getattr(logging, args.log_level.upper(), None)
-    if not isinstance(numeric_log_level, int):
-        raise ValueError('Invalid log level: %s' % args.log_level)
-    logging.basicConfig(
-        level=numeric_log_level,
-        filename=os.path.join(results_dir, "tensorboard-logs.log"),
-        filemode='w',
-        format='%(levelname)s - File \"%(filename)s\", Function \"%(funcName)s\", line %(lineno)dr (%(asctime)s):\n'
-               '  %(message)s',
-        datefmt='%Y/%m/%d %I:%M:%S %p')
-
-    if (args.print_logs):  # add handler to logger to print the output
-        root_logger = logging.getLogger()
-        handler = logging.StreamHandler(sys.stdout)
-        root_logger.addHandler(handler)
+    # ########## config logging ##########
+    # numeric_log_level = getattr(logging, args.log_level.upper(), None)
+    # if not isinstance(numeric_log_level, int):
+    #     raise ValueError('Invalid log level: %s' % args.log_level)
+    # logging.basicConfig(
+    #     level=numeric_log_level,
+    #     filename=os.path.join(results_dir, "tensorboard-logs.log"),
+    #     filemode='w',
+    #     format='%(levelname)s - File \"%(filename)s\", Function \"%(funcName)s\", line %(lineno)dr (%(asctime)s):\n'
+    #            '  %(message)s',
+    #     datefmt='%Y/%m/%d %I:%M:%S %p')
+    #
+    # if (args.print_logs):  # add handler to logger to print the output
+    #     root_logger = logging.getLogger()
+    #     handler = logging.StreamHandler(sys.stdout)
+    #     root_logger.addHandler(handler)
 
     writer = MyWriter(results_dir)
 

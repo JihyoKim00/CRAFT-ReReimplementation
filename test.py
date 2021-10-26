@@ -97,7 +97,7 @@ def test_net(args, net, image, text_threshold, link_threshold, low_text, cuda, p
 def test(args, ckpt_path):
     # load net
 
-    net = CRAFT(use_vgg16_pretrained=False)
+    net = CRAFT()
     logging.info('Loading weights from checkpoint {}'.format(ckpt_path))
 
     net_param = torch.load(ckpt_path)
