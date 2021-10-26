@@ -138,7 +138,7 @@ def validation(net, loader, logger, epoch):
     losses = craft_writer.AverageMeter()
     net.eval()
     t = time.time()
-    print('#----------------------------------------------------#')
+
     print('start validation')
     #import ipdb;ipdb.set_trace()
     with torch.no_grad():
@@ -164,7 +164,7 @@ def validation(net, loader, logger, epoch):
 
     logger.write([epoch, losses.avg])
     print(f'Validation Loss: {losses.avg:0.5f} ')
-
+    print('#----------------------------------------------------#')
     return losses.avg
 
 

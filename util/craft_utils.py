@@ -515,3 +515,37 @@ def draw_curve(work_dir, logger1, logger2, val_color, xlabel='', filelname='seg'
     plt.close()
 
 
+def convert_iter_epoch(epoch, iter, len_data):
+    if iter == None:
+        iter = epoch * len_data
+    else:
+        if iter % len_data !=0 :
+            epoch = iter // len_data + 1
+        else:
+            epoch = iter // len_data
+
+    return epoch, iter
+
+def save_final_option(args):
+
+    """ final options """
+    with open(f'{args.results_dir}/opt.txt', 'a', encoding="utf-8") as opt_file:
+        opt_log = '------------ Options -------------\n'
+        arg = vars(args)
+        for k, v in arg.items():
+            opt_log += f'{str(k)}: {str(v)}\n'
+        opt_log += '---------------------------------------\n'
+        print(opt_log)
+        opt_file.write(opt_log)
+
+
+def save_model(save_dir,net, optimizer, name, iter, epoch, mode):
+
+    ckpt_path_ep = os.path.join(save_dir,'{}_{}'.format(name,str(mode)) + '.pth')
+    torch.save({
+        'craft': net.state_dict(),
+        'optim': optimizer.state_dict(),
+        'step': iter,
+        'epoch': epoch
+    }, ckpt_path_ep)
+

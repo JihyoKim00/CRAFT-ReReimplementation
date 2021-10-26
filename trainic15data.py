@@ -176,16 +176,8 @@ if __name__ == '__main__':
     results_dir_it = f'{args.results_dir}/iter'
 
 
-
-    """ final options """
-    with open(f'{args.results_dir}/opt.txt', 'a', encoding="utf-8") as opt_file:
-        opt_log = '------------ Options -------------\n'
-        arg = vars(args)
-        for k, v in arg.items():
-            opt_log += f'{str(k)}: {str(v)}\n'
-        opt_log += '---------------------------------------\n'
-        print(opt_log)
-        opt_file.write(opt_log)
+    #save args
+    craft_utils.save_final_option(args)
 
 
     # start train
@@ -253,24 +245,14 @@ if __name__ == '__main__':
 
                 if val_loss_it < best_loss_it:
                     best_loss_it = val_loss_it
-                    ckpt_path_it = os.path.join(results_dir_it, str(step_index) + '.pth')
-                    torch.save({
-                        'craft': net.state_dict(),
-                        'optim': optimizer.state_dict(),
-                        'step': step_index,
-                        'epoch': ep
-                    }, ckpt_path_it)
+                    craft_utils.save_model(results_dir_it, net, optimizer, 'iter', step_index, ep, mode=step_index)
+
 
 
             # last model save_iter
             if step_index == args.iter:
-                ckpt_path_it = os.path.join(results_dir_it, 'lastmodel_it_{}'.format(str(step_index)) + '.pth')
-                torch.save({
-                    'craft': net.state_dict(),
-                    'optim': optimizer.state_dict(),
-                    'step': step_index,
-                    'epoch': ep
-                }, ckpt_path_it)
+                craft_utils.save_model(results_dir_it, net, optimizer, 'lastmodel_it', step_index, ep, mode=step_index)
+
                 breaker = False
                 break
 
@@ -289,26 +271,12 @@ if __name__ == '__main__':
 
         if val_loss_ep < best_loss_ep:
             best_loss_ep = val_loss_ep
-
-            ckpt_path_ep = os.path.join(results_dir_ep, str(ep) + '.pth')
-            torch.save({
-                'craft': net.state_dict(),
-                'optim': optimizer.state_dict(),
-                'step': ep,
-                'epoch': ep
-            }, ckpt_path_ep)
+            craft_utils.save_model(results_dir_ep, net, optimizer, 'epoch', step_index, ep, mode=ep)
 
 
 
     # last model save
-    ckpt_path_ep = os.path.join(results_dir_ep, 'lastmodel_ep_{}'.format(str(ep)) + '.pth')
-    torch.save({
-        'craft': net.state_dict(),
-        'optim': optimizer.state_dict(),
-        'step': ep,
-        'epoch': ep
-    }, ckpt_path_ep)
-
+    craft_utils.save_model(results_dir_ep, net, optimizer, 'lastmodel_ep', step_index, epoch, mode=epoch)
 
 
     try:
