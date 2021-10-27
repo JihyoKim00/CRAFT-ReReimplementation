@@ -24,7 +24,7 @@ from collections import OrderedDict
 from tqdm import tqdm
 from util import writer as craft_writer
 from util.mseloss import Maploss
-
+from eval.script import eval_2015
 
 
 def copyStateDict(state_dict):
@@ -132,17 +132,70 @@ def test(args, ckpt_path):
 
 
 
-#TO-do
-def validation(net, loader, logger, epoch):
 
+def post_processing(image_path, score_text, score_link, text_threshold, link_threshold, low_text, poly):
+
+
+    image = imgproc.loadImage(image_path)
+
+
+
+    score_text = score_text.clone().detach().cpu().data.numpy()[0,:,:]
+    score_link = score_link.clone().detach().cpu().data.numpy()[0,:,:]
+
+
+    img_resized, target_ratio, size_heatmap = imgproc.resize_aspect_ratio(image, 768,
+                                                                          interpolation=cv2.INTER_LINEAR,
+                                                                          mag_ratio=1.5)
+    ratio_h = ratio_w = 1 / target_ratio
+
+
+    # Post-processing
+    boxes, polys = craft_utils.getDetBoxes(score_text, score_link, text_threshold, link_threshold, low_text, poly)
+
+    # coordinate adjustment
+    boxes = craft_utils.adjustResultCoordinates(boxes, ratio_w, ratio_h)
+    polys = craft_utils.adjustResultCoordinates(polys, ratio_w, ratio_h)
+    for k in range(len(polys)):
+        if polys[k] is None: polys[k] = boxes[k]
+
+
+    # render results (optional)
+    render_img = score_text.copy()
+    render_img = np.hstack((render_img, score_link))
+    ret_score_text = imgproc.cvt2HeatmapImg(render_img)
+
+
+    return image, boxes, polys, ret_score_text
+
+
+
+def save_pic(image_path, score_text, image, polys, result_folder, gt_file_path, crop=False, gt_bbox=False):
+
+    if not os.path.exists(result_folder):
+        os.mkdir(result_folder)
+
+
+    # save score text
+    filename, file_ext = os.path.splitext(os.path.basename(image_path))
+    mask_file = result_folder + "/res_" + filename + '_mask.jpg'
+    cv2.imwrite(mask_file, score_text)
+
+
+    file_utils.saveResult(image_path, image[:, :, ::-1], polys, dirname=result_folder,gt_bbox=gt_file_path,crop=crop)
+
+
+
+# TO-do
+def validation(args, net, loader, logger, epoch, poly, viz, result_folder):
     losses = craft_writer.AverageMeter()
     net.eval()
     t = time.time()
 
     print('start validation')
-    #import ipdb;ipdb.set_trace()
+    # import ipdb;ipdb.set_trace()
     with torch.no_grad():
-        for images, gh_label, gah_label, mask, _, unnormalized_images, img_paths in loader:
+        for idx,(images, gh_label, gah_label, mask, _, unnormalized_images, img_paths) in enumerate(loader):
 
             images = images.cuda()
             gh_label = gh_label.cuda()
@@ -150,7 +203,6 @@ def validation(net, loader, logger, epoch):
             mask = mask.cuda()
 
             out, _ = net(images)
-
 
             out1 = out[:, :, :, 0].cuda()
             out2 = out[:, :, :, 1].cuda()
@@ -161,6 +213,15 @@ def validation(net, loader, logger, epoch):
             # log update
             losses.update(loss.item(), 1)
 
+            if viz:
+                image, boxes, polys, ret_score_text = post_processing(img_paths[0], out1, out2,
+                                                                      args.text_threshold, args.link_threshold,
+                                                                      args.low_text, poly)
+
+                save_pic(img_paths[0], ret_score_text, image, polys, gt_file_path=args.gt_file_path, result_folder=result_folder,
+                         crop=False)
+
+    #resDict = eval_2015(result_folder)
 
     logger.write([epoch, losses.avg])
     print(f'Validation Loss: {losses.avg:0.5f} ')
@@ -168,6 +229,42 @@ def validation(net, loader, logger, epoch):
     return losses.avg
 
 
+# #TO-do
+# def validation(net, loader, logger, epoch):
+#
+#     losses = craft_writer.AverageMeter()
+#     net.eval()
+#     t = time.time()
+#
+#     print('start validation')
+#     #import ipdb;ipdb.set_trace()
+#     with torch.no_grad():
+#         for images, gh_label, gah_label, mask, _, unnormalized_images, img_paths in loader:
+#
+#             images = images.cuda()
+#             gh_label = gh_label.cuda()
+#             gah_label = gah_label.cuda()
+#             mask = mask.cuda()
+#
+#             out, _ = net(images)
+#
+#
+#             out1 = out[:, :, :, 0].cuda()
+#             out2 = out[:, :, :, 1].cuda()
+#
+#             criterion = Maploss()
+#             loss = criterion(gh_label, gah_label, out1, out2, mask)
+#
+#             # log update
+#             losses.update(loss.item(), 1)
+#
+#
+#     logger.write([epoch, losses.avg])
+#     print(f'Validation Loss: {losses.avg:0.5f} ')
+#     print('#----------------------------------------------------#')
+#     return losses.avg
+#
+#
 
 
 

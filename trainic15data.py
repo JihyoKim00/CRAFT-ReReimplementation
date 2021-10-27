@@ -39,6 +39,8 @@ parser.add_argument('--icdar2015_path', default='/home/data/ocr/detection/ICDAR2
 parser.add_argument("--ckpt_path", default='/data/workspace/woans0104/CRAFT-reimplementation/exp'
                                            '/ICDAR2015_test/lastmodel_1.pth', type=str,
                     help="path to pretrained model")
+parser.add_argument("--gt_file_path", default='/data/workspace/woans0104/CRAFT-reimplementation/exp/2015_gt.zip', type=str,
+                    help="path to gt file")
 
 
 parser.add_argument('--lr', '--learning-rate', default=1e-4, type=float,
@@ -54,6 +56,15 @@ parser.add_argument('--iter', default=None, type=int,
                     help='Path to save checkpoints')
 parser.add_argument('--val_interval', default=None, type=int,
                     help='Path to save checkpoints')
+
+parser.add_argument('--text_threshold', default=0.85, type=float, help='text confidence threshold')
+parser.add_argument('--low_text', default=0.5, type=float, help='text low-bound score')
+parser.add_argument('--link_threshold', default=0.2, type=float, help='link confidence threshold')
+
+
+
+
+
 
 args = parser.parse_args()
 
@@ -192,82 +203,91 @@ if __name__ == '__main__':
         train_time_st = time.time()
 
 
-        start_time = time.time()
-        for index, (real_images, real_gh_label, real_gah_label, real_mask, _, _, _) in enumerate(
-                tqdm(real_data_trn_loader)):
+        # start_time = time.time()
+        # for index, (real_images, real_gh_label, real_gah_label, real_mask, _, _, _) in enumerate(
+        #         tqdm(real_data_trn_loader)):
+        #
+        #     net.train()
+        #     step_index += 1
+        #     losses = craft_writer.AverageMeter()
+        #
+        #     if step_index % 10000 == 0 and step_index != 0:
+        #         adjust_learning_rate(optimizer, args.lr, step_index)
+        #
+        #
+        #
+        #     # load synthetic images from SythText dataset
+        #     syn_images, syn_gh_label, syn_gah_label, syn_mask, _, _, _ = next(batch_syn)
+        #
+        #     # add ICDAR images with synthetic images in the same batch
+        #     images = torch.cat((syn_images, real_images), 0)
+        #     gh_label = torch.cat((syn_gh_label, real_gh_label), 0)
+        #     gah_label = torch.cat((syn_gah_label, real_gah_label), 0)
+        #     mask = torch.cat((syn_mask, real_mask), 0)
+        #
+        #     images = Variable(images.type(torch.FloatTensor)).cuda()
+        #     gh_label = gh_label.type(torch.FloatTensor)
+        #     gah_label = gah_label.type(torch.FloatTensor)
+        #     gh_label = Variable(gh_label).cuda()
+        #     gah_label = Variable(gah_label).cuda()
+        #     mask = mask.type(torch.FloatTensor)
+        #     mask = Variable(mask).cuda()
+        #
+        #     out, _ = net(images)
+        #
+        #     optimizer.zero_grad()
+        #
+        #     out1 = out[:, :, :, 0].cuda()
+        #     out2 = out[:, :, :, 1].cuda()
+        #     loss = criterion(gh_label, gah_label, out1, out2, mask)
+        #
+        #     loss.backward()
+        #     optimizer.step()
+        #     # log update
+        #     losses.update(loss.item(), 1)
+        #
+        #
+        #     #val interval
+        #     if step_index % args.val_interval == 0 and step_index != 0:
+        #         trn_logger_it.write([step_index, losses.avg])
+        #
+        #         save_val_dir_path = os.path.join(results_dir_it, "it_{}".format(step_index))
+        #         val_loss_it = validation(args, net, real_data_val_loader, val_logger_it, step_index, poly=True, viz=True,
+        #                    result_folder=save_val_dir_path)
+        #
+        #         # saving the model with loss
+        #
+        #         if val_loss_it < best_loss_it:
+        #             best_loss_it = val_loss_it
+        #             craft_utils.save_model(results_dir_it, net, optimizer, 'iter', step_index, ep, mode=step_index)
+        #
+        #
+        #
+        #     # last model save_iter
+        #     if step_index == args.iter:
+        #         craft_utils.save_model(results_dir_it, net, optimizer, 'lastmodel_it', step_index, ep, mode=step_index)
+        #
+        #         breaker = False
+        #         break
+        #
+        # if breaker == False:
+        #     break
+        #
+        #
+        # # log epoch
+        #
+        #
+        # elapsed_time = time.time() - start_time
+        # trn_logger_ep.write([ep, losses.avg])
+        # print(f'[{epoch}/{ep}] Loss: {losses.avg:0.5f} '
+        #       f'elapsed_time: {elapsed_time:0.5f}')
 
-            net.train()
-            step_index += 1
-            losses = craft_writer.AverageMeter()
-
-            if step_index % 10000 == 0 and step_index != 0:
-                adjust_learning_rate(optimizer, args.lr, step_index)
 
 
+        save_val_dir_path = os.path.join(results_dir_ep, "ep_{}".format(ep))
+        val_loss_ep = validation(args, net, real_data_val_loader, val_logger_ep, ep, poly=True, viz=True,
+                                 result_folder=save_val_dir_path)
 
-            # load synthetic images from SythText dataset
-            syn_images, syn_gh_label, syn_gah_label, syn_mask, _, _, _ = next(batch_syn)
-
-            # add ICDAR images with synthetic images in the same batch
-            images = torch.cat((syn_images, real_images), 0)
-            gh_label = torch.cat((syn_gh_label, real_gh_label), 0)
-            gah_label = torch.cat((syn_gah_label, real_gah_label), 0)
-            mask = torch.cat((syn_mask, real_mask), 0)
-
-            images = Variable(images.type(torch.FloatTensor)).cuda()
-            gh_label = gh_label.type(torch.FloatTensor)
-            gah_label = gah_label.type(torch.FloatTensor)
-            gh_label = Variable(gh_label).cuda()
-            gah_label = Variable(gah_label).cuda()
-            mask = mask.type(torch.FloatTensor)
-            mask = Variable(mask).cuda()
-
-            out, _ = net(images)
-
-            optimizer.zero_grad()
-
-            out1 = out[:, :, :, 0].cuda()
-            out2 = out[:, :, :, 1].cuda()
-            loss = criterion(gh_label, gah_label, out1, out2, mask)
-
-            loss.backward()
-            optimizer.step()
-            # log update
-            losses.update(loss.item(), 1)
-
-
-            #val interval
-            if step_index % args.val_interval == 0 and step_index != 0:
-                trn_logger_it.write([step_index, losses.avg])
-                val_loss_it = validation(net, real_data_val_loader, val_logger_it, step_index)
-
-                # saving the model with loss
-
-                if val_loss_it < best_loss_it:
-                    best_loss_it = val_loss_it
-                    craft_utils.save_model(results_dir_it, net, optimizer, 'iter', step_index, ep, mode=step_index)
-
-
-
-            # last model save_iter
-            if step_index == args.iter:
-                craft_utils.save_model(results_dir_it, net, optimizer, 'lastmodel_it', step_index, ep, mode=step_index)
-
-                breaker = False
-                break
-
-        if breaker == False:
-            break
-
-
-        # log epoch
-
-
-        elapsed_time = time.time() - start_time
-        trn_logger_ep.write([ep, losses.avg])
-        print(f'[{epoch}/{ep}] Loss: {losses.avg:0.5f} '
-              f'elapsed_time: {elapsed_time:0.5f}')
-        val_loss_ep = validation(net, real_data_val_loader, val_logger_ep, ep)
 
         if val_loss_ep < best_loss_ep:
             best_loss_ep = val_loss_ep
@@ -281,9 +301,9 @@ if __name__ == '__main__':
 
     try:
         craft_utils.draw_curve(results_dir_ep, trn_logger_ep, val_logger_ep, val_color='-r'
-                               , xlabel='epoch', filelname='synthesis')
+                               , xlabel='epoch', filelname='icdar2015')
         craft_utils.draw_curve(results_dir_it, trn_logger_it, val_logger_it, val_color='-r'
-                               , xlabel='iter', filelname='synthesis')
+                               , xlabel='iter', filelname='icdar2015')
 
     except Exception as e:
         print(e)
